@@ -11,11 +11,6 @@ from comments.forms import CommentForm
 from .models import Post, Category, Tag
 
 
-def index(request):
-    post_list = Post.objects.all()
-    return render(request, 'blog/index.html', context={'post_list': post_list})
-
-
 class IndexView(ListView):
     model = Post
     template_name = 'blog/index.html'
@@ -23,14 +18,6 @@ class IndexView(ListView):
     paginate_by = 10
 
     def get_context_data(self, **kwargs):
-        """
-        在视图函数中将模板变量传递给模板是通过给 render 函数的 context 参数传递一个字典实现的，
-        例如 render(request, 'blog/index.html', context={'post_list': post_list})，
-        这里传递了一个 {'post_list': post_list} 字典给模板。
-        在类视图中，这个需要传递的模板变量字典是通过 get_context_data 获得的，
-        所以我们复写该方法，以便我们能够自己再插入一些我们自定义的模板变量进去。
-        """
-
         # 首先获得父类生成的传递给模板的字典。
         context = super(IndexView, self).get_context_data(**kwargs)
 
@@ -38,9 +25,6 @@ class IndexView(ListView):
         # paginator 是 Paginator 的一个实例，
         # page_obj 是 Page 的一个实例，
         # is_paginated 是一个布尔变量，用于指示是否已分页。
-        # 例如如果规定每页 10 个数据，而本身只有 5 个数据，其实就用不着分页，此时 is_paginated=False。
-        # 关于什么是 Paginator，Page 类在 Django Pagination 简单分页：http://zmrenwu.com/post/34/ 中已有详细说明。
-        # 由于 context 是一个字典，所以调用 get 方法从中取出某个键对应的值。
         paginator = context.get('paginator')
         page = context.get('page_obj')
         is_paginated = context.get('is_paginated')
@@ -154,29 +138,7 @@ class IndexView(ListView):
         return data
 
 
-def detail(request, pk):
-    post = get_object_or_404(Post, pk=pk)
 
-    # 阅读量 +1
-    post.increase_views()
-
-    post.body = markdown.markdown(post.body,
-                                  extensions=[
-                                      'markdown.extensions.extra',
-                                      'markdown.extensions.codehilite',
-                                      'markdown.extensions.toc',
-                                  ])
-    # 记得在顶部导入 CommentForm
-    form = CommentForm()
-    # 获取这篇 post 下的全部评论
-    comment_list = post.comment_set.all()
-
-    # 将文章、表单、以及文章下的评论列表作为模板变量传给 detail.html 模板，以便渲染相应数据。
-    context = {'post': post,
-               'form': form,
-               'comment_list': comment_list
-               }
-    return render(request, 'blog/detail.html', context=context)
 
 
 # 记得在顶部导入 DetailView
@@ -225,11 +187,6 @@ class PostDetailView(DetailView):
         return context
 
 
-def archives(request, year, month):
-    post_list = Post.objects.filter(created_time__year=year,
-                                    created_time__month=month
-                                    )
-    return render(request, 'blog/index.html', context={'post_list': post_list})
 
 
 class ArchivesView(ListView):
@@ -243,12 +200,6 @@ class ArchivesView(ListView):
         return super(ArchivesView, self).get_queryset().filter(created_time__year=year,
                                                                created_time__month=month
                                                                )
-
-
-def category(request, pk):
-    cate = get_object_or_404(Category, pk=pk)
-    post_list = Post.objects.filter(category=cate)
-    return render(request, 'blog/index.html', context={'post_list': post_list})
 
 
 class CategoryView(ListView):
